@@ -17,6 +17,7 @@ import { summarize } from "./process-video/summarize";
 import { fixTranscripts } from "./process-video/fix-transcripts";
 import { createBlogPage } from "./process-video/create-blog-page";
 import { updateBlogPageContents } from "./process-video/update-blog-page-contents";
+import { convertWavToMp3 } from "./process-video/convert-wav-to-mp3";
 
 if (process.argv.length !== 4) {
   console.log("Usage: process-video.ts <input-video-path> <output-video-path>");
@@ -90,12 +91,21 @@ logger("Enhanced audio is ready");
 await inParallel([
   // The audio / video track
   (async () => {
-    logger("Replacing audio in the video");
-    const finalVideoPath = appendFilename(editedVideoFilename, "-fixed_audio");
-    ifNotExists(finalVideoPath, () =>
-      replaceAudio(editedVideoFilename, enhancedAudioFilename, finalVideoPath)
+    const finalAudioPath = replaceExtension(editedVideoFilename, "mp3");
+    await ifNotExists(finalAudioPath, async () =>
+      convertWavToMp3(enhancedAudioFilename, finalAudioPath)
     );
-    logger("### Audio is replaced, final video is ready ###", finalVideoPath);
+
+    const finalVideoPath = appendFilename(editedVideoFilename, "-fixed_audio");
+    await ifNotExists(finalVideoPath, async () => {
+      logger("Replacing audio in the video");
+      await replaceAudio(
+        editedVideoFilename,
+        enhancedAudioFilename,
+        finalVideoPath
+      );
+      logger("### Audio is replaced, final video is ready ###", finalVideoPath);
+    });
   })(),
 
   // The transcript and contents

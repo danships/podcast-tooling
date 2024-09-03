@@ -78,6 +78,7 @@ export async function createBlogPage(
       Created: {
         date: {
           start: new Date().toISOString(),
+          time_zone: "Europe/Amsterdam",
         },
       },
       Category: {

@@ -2,6 +2,7 @@ import { Client } from "@notionhq/client";
 import { readFile } from "fs/promises";
 import { logger } from "./logger";
 import { environment } from "./environment";
+import { BlockObjectRequest } from "@notionhq/client/build/src/api-endpoints";
 
 export async function updateBlogPageContents(
   pageId: string,
@@ -74,6 +75,13 @@ export async function updateBlogPageContents(
       },
       {
         object: "block",
+        type: "embed",
+        embed: {
+          url: "https://podcast.debuggingdan.com/@debuggingdan/episodes/[slug]/embed",
+        },
+      },
+      {
+        object: "block",
         type: "heading_1",
         heading_1: {
           rich_text: [
@@ -86,20 +94,25 @@ export async function updateBlogPageContents(
           ],
         },
       },
-      {
-        object: "block",
-        type: "paragraph",
-        paragraph: {
-          rich_text: [
-            {
-              type: "text",
-              text: {
-                content: transcript,
-              },
+      ...transcript
+        .split("\n\n")
+        .map((line) => line.trim())
+        .map(
+          (line): BlockObjectRequest => ({
+            object: "block",
+            type: "paragraph",
+            paragraph: {
+              rich_text: [
+                {
+                  type: "text",
+                  text: {
+                    content: line,
+                  },
+                },
+              ],
             },
-          ],
-        },
-      },
+          })
+        ),
     ],
   });
 
