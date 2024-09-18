@@ -1,5 +1,7 @@
 # whisper
 
+Use whisper to generate transcripts for audio files.
+
 ## Setup
 
 ```bash

@@ -91,7 +91,11 @@ logger("Enhanced audio is ready");
 await inParallel([
   // The audio / video track
   (async () => {
-    const finalAudioPath = replaceExtension(editedVideoFilename, "mp3");
+    const finalAudioPath = appendFilename(
+      editedVideoFilename,
+      "-fixed_audio",
+      "mp3"
+    );
     await ifNotExists(finalAudioPath, async () =>
       convertWavToMp3(enhancedAudioFilename, finalAudioPath)
     );

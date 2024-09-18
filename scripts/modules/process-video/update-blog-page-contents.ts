@@ -97,6 +97,13 @@ export async function updateBlogPageContents(
       ...transcript
         .split("\n\n")
         .map((line) => line.trim())
+        .flatMap((line) => {
+          if (line.length > 1950) {
+            // The max size for a paragraph is 2000 characters in Notio, so on the safe side we split at 1950.
+            return [line.slice(0, 1950), line.slice(1950)];
+          }
+          return [line];
+        })
         .map(
           (line): BlockObjectRequest => ({
             object: "block",
