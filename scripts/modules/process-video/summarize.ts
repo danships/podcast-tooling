@@ -8,7 +8,8 @@ Very good in extracting the correct message from the transcripts, and other acti
 You are asked to look into the transcript below for the Debugging Dan podcast, the user will ask you questions about it.`;
 
 export function getModel() {
-  return environment.DEBUG ? "gpt-4o-mini" : "gpt-4o";
+  // return environment.DEBUG ? "gpt-4o-mini" : "gpt-4o";
+  return "gpt-4o-mini";
 }
 
 export async function summarize(transcriptFile: string, outputFile: string) {
