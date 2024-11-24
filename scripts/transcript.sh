@@ -11,4 +11,4 @@ if [ -z "$input_file" ] || [ -z "$output_dir" ]; then
 fi
 
 source ../transcribe/whisper/.whisper-env/bin/activate
-whisper $input_file --language en --model medium --output_dir $output_dir
+whisper $input_file --language en --model turbo --output_dir $output_dir
