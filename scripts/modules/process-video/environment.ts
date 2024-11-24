@@ -9,4 +9,7 @@ export const environment = cleanEnv(process.env, {
 
   NOTION_API_KEY: str(),
   NOTION_DATABASE_ID: str(),
+
+  DATASTHOR_API_KEY: str(),
+  DATASTHOR_NAMESPACE: str(),
 });

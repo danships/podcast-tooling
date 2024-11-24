@@ -1,9 +1,6 @@
 import "dotenv/config";
-import { uploadVideo } from "./process-video/telegram";
 import path from "node:path";
 import { waitForFile } from "./process-video/wait-for-file";
-import { mergeFrameWithAudio } from "./process-video/ffmpeg";
-import { environment } from "./process-video/environment";
 import { logger } from "./process-video/logger";
 import { appendFilename } from "./process-video/append-filename";
 import { ifNotExists } from "./process-video/if-not-exists";
@@ -11,49 +8,22 @@ import { replaceExtension } from "./process-video/replace-extension";
 import { extractAudio } from "./process-video/extract-audio";
 import { inParallel } from "./process-video/in-parallel";
 import { replaceAudio } from "./process-video/replace-audio";
-import { runShellCommand } from "./process-video/run";
 import { generateTranscripts } from "./process-video/transcript";
 import { summarize } from "./process-video/summarize";
 import { fixTranscripts } from "./process-video/fix-transcripts";
-import { createBlogPage } from "./process-video/create-blog-page";
-import { updateBlogPageContents } from "./process-video/update-blog-page-contents";
 import { convertWavToMp3 } from "./process-video/convert-wav-to-mp3";
+import { transcriptUpload } from "./process-video/transcript-upload";
 
-if (process.argv.length !== 4) {
-  console.log("Usage: process-video.ts <input-video-path> <output-video-path>");
+if (process.argv.length !== 5) {
+  console.log(
+    "Usage: process-video.ts <input-video-path> <output-video-path> <slug>"
+  );
   process.exit(1);
 }
 
 const videoFile = process.argv[2];
 const outDir = process.argv[3];
-
-// upload the video to debuggingdanbot
-// TODO Disabled, complains about request entity too large
-//void uploadVideo(videoFile);
-
-const coverFile = path.join(outDir, "cover_video.png");
-await waitForFile(coverFile);
-
-logger("Generating intro and outtro bits");
-const folderWithBits = environment.FOLDER_WITH_BITS;
-const introPath = path.join(outDir, "bits_intro.mp4");
-await ifNotExists(introPath, () =>
-  mergeFrameWithAudio(
-    coverFile,
-    path.join(folderWithBits, "Ep intro cut (enhanced).wav"),
-    introPath
-  )
-);
-
-const outtroPath = path.join(outDir, "bits_outtro.mp4");
-await ifNotExists(outtroPath, () =>
-  mergeFrameWithAudio(
-    coverFile,
-    path.join(folderWithBits, "Ep outtro cut (enhanced).wav"),
-    outtroPath
-  )
-);
-logger("Generated intro and outtro bits");
+const slug = process.argv[4];
 
 // Take the filename from videoFile and append it to the outDir
 const videoFilename = path.basename(videoFile);
@@ -117,9 +87,6 @@ await inParallel([
     const transcriptFilename = replaceExtension(enhancedAudioFilename, "txt");
     const subtitleFilename = replaceExtension(enhancedAudioFilename, "vtt");
 
-    // First create the blog page, so that that already exists (add the intro etc later)
-    const pageId = await createBlogPage(transcriptFilename);
-
     logger("Generating transcripts");
     await ifNotExists(transcriptFilename, () =>
       generateTranscripts(enhancedAudioFilename, outDir)
@@ -141,13 +108,9 @@ await inParallel([
         await ifNotExists(fixedTranscriptsFilename, () =>
           fixTranscripts(transcriptFilename, fixedTranscriptsFilename)
         );
+        // Upload the transcripts to datasthor for the blog
+        await transcriptUpload(fixedTranscriptsFilename, slug);
       })(),
     ]);
-    await updateBlogPageContents(
-      pageId,
-      transcriptFilename,
-      fixedTranscriptsFilename,
-      summaryFilename
-    );
   })(),
 ]);
