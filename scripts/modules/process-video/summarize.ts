@@ -9,13 +9,19 @@ You are asked to look into the transcript below for the Debugging Dan podcast, t
 
 export function getModel() {
   // return environment.DEBUG ? "gpt-4o-mini" : "gpt-4o";
-  return "gpt-4o-mini";
+  return environment.OPENAI_MODEL ?? "gpt-4o-mini";
 }
 
 export async function summarize(transcriptFile: string, outputFile: string) {
   const transcript = await readFile(transcriptFile, "utf8");
 
-  const client = new OpenAI({ apiKey: environment.OPENAI_API_KEY });
+  const openAIOptions: Record<string, unknown> = {
+    apiKey: environment.OPENAI_API_KEY,
+  };
+  if (environment.OPENAI_URL) {
+    openAIOptions.baseUrl = environment;
+  }
+  const client = new OpenAI(openAIOptions);
 
   const chatCompletion = await client.chat.completions.create({
     messages: [

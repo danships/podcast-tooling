@@ -13,6 +13,8 @@ import { summarize } from "./process-video/summarize";
 import { fixTranscripts } from "./process-video/fix-transcripts";
 import { convertWavToMp3 } from "./process-video/convert-wav-to-mp3";
 import { transcriptUpload } from "./process-video/transcript-upload";
+import { generateJsonChapters } from "./process-video/json-chapters";
+import { generateYoutubeDescription } from "./process-video/youtube-description";
 
 if (process.argv.length !== 5) {
   console.log(
@@ -110,6 +112,29 @@ await inParallel([
         );
         // Upload the transcripts to datasthor for the blog
         await transcriptUpload(fixedTranscriptsFilename, slug);
+
+        const jsonChapterFilename = appendFilename(
+          fixedTranscriptsFilename,
+          "_chapters",
+          "json"
+        );
+
+        const vttChapterFilename = replaceExtension(transcriptFilename, "vtt");
+        await ifNotExists(jsonChapterFilename, () =>
+          generateJsonChapters(vttChapterFilename, jsonChapterFilename)
+        );
+
+        const youtubeDescriptionFilename = appendFilename(
+          jsonChapterFilename,
+          "_youtube",
+          "txt"
+        );
+        await ifNotExists(youtubeDescriptionFilename, () =>
+          generateYoutubeDescription(
+            jsonChapterFilename,
+            youtubeDescriptionFilename
+          )
+        );
       })(),
     ]);
   })(),

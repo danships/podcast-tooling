@@ -10,7 +10,13 @@ export async function fixTranscripts(
 ) {
   const transcript = await readFile(transcriptFile, "utf8");
 
-  const client = new OpenAI({ apiKey: environment.OPENAI_API_KEY });
+  const openAIOptions: Record<string, unknown> = {
+    apiKey: environment.OPENAI_API_KEY,
+  };
+  if (environment.OPENAI_URL) {
+    openAIOptions.baseURL = environment.OPENAI_URL;
+  }
+  const client = new OpenAI(openAIOptions);
 
   const chatCompletion = await client.chat.completions.create({
     messages: [
