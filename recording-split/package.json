@@ -2,12 +2,14 @@
   "name": "recording-split",
   "private": true,
   "dependencies": {
+    "csv-parser": "^3.2.0",
     "sharp": "^0.34.1",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   },
   "type": "module",
   "scripts": {
-    "split-frames": "tsx src/split-frames.ts"
+    "split-frames": "tsx src/split-frames.ts",
+    "csv-split": "tsx src/csv-split.ts"
   }
 }

@@ -8,17 +8,12 @@ const FRAME_DIR = 'frames';
 const SUMMARY_DIR = 'summaries';
 const INTERVAL = 10; // seconds
 const MODEL = 'gemma3:12b-it-qat';
+const MAX_RETRIES = 3;
+const INITIAL_BACKOFF_MS = 1000;
 
 const OLLAMA_HOST = process.env.OLLAMA_HOST || 'http://localhost:11434';
 
-const PROMPT = `You are analyzing a coding livestream. In prior frames, the coder performed:
-
-- [T-2]: {{ t-2 }}
-- [T-1]: {{ t-1 }}
-
-Now, describe what the coder is doing in the current frame **in relation to those previous steps**. Focus on **why** this step is being done — not just what is visible.
-
-Return only a **single, concise sentence** summarizing what the coder is trying to accomplish **at this point in the workflow**, using high-level terms (e.g., writing tests, refining UX logic, finalizing error handling).`;
+const PROMPT = `You are analyzing a coding livestream. If the frame is showing an IDE, output the file path that is being edited. If the frame is showing a webbrowser, output the URL. Else, return a 1-2 sentence summary of the screen. ONLY output the full path or the URL, nothing else.`;
 
 // Ensure folders exist
 async function ensureFoldersExist({
@@ -47,6 +42,31 @@ function extractFrames(
     `ffmpeg -i "${escapedInput}" -vf fps=1/${interval} "${escapedOutput}/frame_%04d.jpg"`,
     { shell: '/bin/bash' }
   );
+}
+
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = MAX_RETRIES,
+  initialBackoffMs: number = INITIAL_BACKOFF_MS
+): Promise<T> {
+  let lastError: Error | null = null;
+
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      if (attempt === maxRetries - 1) break;
+
+      const backoffMs = initialBackoffMs * Math.pow(2, attempt);
+      console.log(
+        `Attempt ${attempt + 1} failed, retrying in ${backoffMs}ms...`
+      );
+      await new Promise((resolve) => setTimeout(resolve, backoffMs));
+    }
+  }
+
+  throw lastError;
 }
 
 async function run(): Promise<void> {
@@ -101,18 +121,28 @@ async function run(): Promise<void> {
 
     const base64 = resizedBuffer.toString('base64');
 
-    const response = await fetch(`${OLLAMA_HOST}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: MODEL,
-        prompt: PROMPT.replace('{{ t-2 }}', summaryLines[i - 2]).replace(
-          '{{ t-1 }}',
-          summaryLines[i - 1]
-        ),
-        images: [base64],
-        stream: false,
-      }),
+    const response = await retryWithBackoff(async () => {
+      const response = await fetch(`${OLLAMA_HOST}/api/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: MODEL,
+          prompt: PROMPT.replace('{{ t-2 }}', summaryLines[i - 2]).replace(
+            '{{ t-1 }}',
+            summaryLines[i - 1]
+          ),
+          images: [base64],
+          stream: false,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Ollama API request failed with status ${response.status}`
+        );
+      }
+
+      return response;
     });
 
     const data = await response.json();

@@ -11,7 +11,7 @@ LIST_FILE="$TMP_DIR/files.txt"
 CURRENT_DURATION=0
 
 # Randomize MP3 list and properly escape filenames
-find "$SRC_DIR" -maxdepth 1 -name "*.mp3" -print0 | shuf -z > "$TMP_DIR/random.txt"
+find "$SRC_DIR" -name "*.mp3" -print0 | shuf -z > "$TMP_DIR/random.txt"
 
 # Collect MP3 files until max duration (if set)
 > "$LIST_FILE"
